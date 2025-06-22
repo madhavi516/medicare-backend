@@ -10,10 +10,9 @@ router.post('/signup', async (req, res) => {
   const db = getDB();
 
   try {
-    await db.run(
-      `INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)`,
-      [name, email, hashedPassword, role]
-    );
+    const stmt = db.prepare(`INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)`);
+    stmt.run(name, email, hashedPassword, role);
+
     res.status(201).json({ message: 'Signup successful' });
   } catch (err) {
     res.status(400).json({ error: 'Email already exists' });
@@ -23,14 +22,19 @@ router.post('/signup', async (req, res) => {
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   const db = getDB();
-  const user = await db.get(`SELECT * FROM users WHERE email = ?`, [email]);
+
+  const stmt = db.prepare(`SELECT * FROM users WHERE email = ?`);
+  const user = stmt.get(email);
 
   if (!user) return res.status(400).json({ error: 'User not found' });
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
 
-  res.status(200).json({ message: 'Login successful', user: { id: user.id, name: user.name, role: user.role } });
+  res.status(200).json({
+    message: 'Login successful',
+    user: { id: user.id, name: user.name, role: user.role },
+  });
 });
 
 export default router;

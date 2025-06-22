@@ -3,30 +3,44 @@ import { getDB } from '../models/initDB.js';
 
 const router = express.Router();
 
-router.post('/', async (req, res) => {
+router.post('/', (req, res) => {
   const { userId, name, dosage, frequency } = req.body;
   const db = getDB();
-  await db.run(
-    `INSERT INTO medications (userId, name, dosage, frequency, takenDates) VALUES (?, ?, ?, ?, ?)`,
-    [userId, name, dosage, frequency, JSON.stringify([])]
+
+  const stmt = db.prepare(
+    `INSERT INTO medications (userId, name, dosage, frequency, takenDates) VALUES (?, ?, ?, ?, ?)`
   );
+  stmt.run(userId, name, dosage, frequency, JSON.stringify([]));
+
   res.status(201).json({ message: 'Medication added' });
 });
 
-router.get('/:userId', async (req, res) => {
+router.get('/:userId', (req, res) => {
   const db = getDB();
-  const meds = await db.all(`SELECT * FROM medications WHERE userId = ?`, [req.params.userId]);
+
+  const stmt = db.prepare(`SELECT * FROM medications WHERE userId = ?`);
+  const meds = stmt.all(req.params.userId);
+
   res.json(meds);
 });
 
-router.put('/taken/:medId', async (req, res) => {
+router.put('/taken/:medId', (req, res) => {
   const { date } = req.body;
   const db = getDB();
-  const med = await db.get(`SELECT takenDates FROM medications WHERE id = ?`, [req.params.medId]);
-  let dates = JSON.parse(med.takenDates);
+
+  const selectStmt = db.prepare(`SELECT takenDates FROM medications WHERE id = ?`);
+  const med = selectStmt.get(req.params.medId);
+
+  let dates = [];
+  if (med?.takenDates) {
+    dates = JSON.parse(med.takenDates);
+  }
+
   if (!dates.includes(date)) dates.push(date);
 
-  await db.run(`UPDATE medications SET takenDates = ? WHERE id = ?`, [JSON.stringify(dates), req.params.medId]);
+  const updateStmt = db.prepare(`UPDATE medications SET takenDates = ? WHERE id = ?`);
+  updateStmt.run(JSON.stringify(dates), req.params.medId);
+
   res.json({ message: 'Marked as taken' });
 });
 

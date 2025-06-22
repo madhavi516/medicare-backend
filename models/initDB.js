@@ -1,15 +1,11 @@
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+import Database from 'better-sqlite3';
 
 let db;
 
-export async function initDB() {
-  db = await open({
-    filename: './database.sqlite',
-    driver: sqlite3.Database,
-  });
+export function initDB() {
+  db = new Database('./database.sqlite');
 
-  await db.exec(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT,
@@ -19,7 +15,7 @@ export async function initDB() {
     );
   `);
 
-  await db.exec(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS medications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       userId INTEGER,
